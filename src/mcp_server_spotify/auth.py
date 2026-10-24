@@ -5,8 +5,9 @@ Uses spotipy's Authorization Code flow. Credentials come from the environment
 which spotipy reads automatically. The refresh token is cached to
 ``~/.spotify-mcp/token.json`` so the browser auth only happens once.
 
-Scopes are deliberately minimal: playlist read + modify only. No playback,
-no library, no profile data — that is the entire trust surface of this server.
+Scopes are deliberately minimal: playlist read + modify, plus read-only access
+to the Liked Songs library (local patch, 2026-10-24, for export_liked_tracks).
+No playback, no library writes, no profile data.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ import spotipy
 from spotipy.cache_handler import CacheFileHandler
 from spotipy.oauth2 import SpotifyOAuth
 
-SCOPES = "playlist-read-private playlist-modify-private playlist-modify-public"
+SCOPES = "playlist-read-private playlist-modify-private playlist-modify-public user-library-read"
 
 _CACHE_DIR = Path.home() / ".spotify-mcp"
 _DEFAULT_REDIRECT_URI = "http://127.0.0.1:8888/callback"

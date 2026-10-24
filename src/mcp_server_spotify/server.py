@@ -5,11 +5,18 @@ get_playlist, add_tracks, remove_tracks, dedupe_playlist, reorder_tracks,
 shuffle_playlist, sort_playlist. Together they let the model locate a playlist
 and resolve tracks to URIs, then edit precisely — the curation taste comes from
 the model, the precise placement comes from the Spotify Web API.
+
+Local patch (2026-10-24): a twelfth, read-only tool, export_liked_tracks, writes
+the Liked Songs library to a CSV backup.
 """
 
 from __future__ import annotations
 
+import csv
+import os
 import random
+from datetime import datetime
+from pathlib import Path
 
 from mcp.server import MCPServer
 
@@ -309,6 +316,48 @@ def _persist_track_order(client, pid: str, uris: list[str]) -> None:
     client.playlist_replace_items(pid, uris[:_TRACK_BATCH])
     for chunk in batched(uris[_TRACK_BATCH:], _TRACK_BATCH):
         client.playlist_add_items(pid, chunk)
+
+
+_EXPORT_DIR = Path.home() / ".spotify-mcp" / "exports"
+
+
+@mcp.tool()
+def export_liked_tracks() -> dict:
+    """Export the user's Liked Songs library to a CSV backup. Read-only.
+
+    Writes ~/.spotify-mcp/exports/liked-songs-<timestamp>.csv (mode 600) with columns
+    added_at, name, artist, album, year, uri. Returns {path, total, skipped}; the
+    tracklist itself is NOT returned, so large libraries stay out of the conversation.
+    Read the CSV from disk to analyse it.
+    """
+    client = auth.get_client()
+    rows: list[dict] = []
+    skipped = 0
+    offset = 0
+    while True:
+        page = client.current_user_saved_tracks(limit=50, offset=offset)
+        items = page.get("items", [])
+        for item in items:
+            compact = compact_track(item)
+            if compact is None:
+                skipped += 1
+                continue
+            compact["added_at"] = item.get("added_at")
+            rows.append(compact)
+        offset += len(items)
+        if not page.get("next") or not items:
+            break
+    _EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(_EXPORT_DIR, 0o700)
+    path = _EXPORT_DIR / f"liked-songs-{datetime.now():%Y%m%d-%H%M%S}.csv"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(
+            fh, fieldnames=["added_at", "name", "artist", "album", "year", "uri"]
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    return {"path": str(path), "total": len(rows), "skipped": skipped}
 
 
 def main() -> None:
