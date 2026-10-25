@@ -69,6 +69,27 @@ def test_compact_track_unwraps_playlist_item():
     assert out["year"] is None  # missing release_date
 
 
+def test_compact_track_unwraps_feb_2026_item_wrapper():
+    # Since the Feb 2026 Web API migration, playlist items are wrapped in "item".
+    item = {
+        "added_at": "2026-01-01T00:00:00Z",
+        "item": {
+            "type": "track",
+            "uri": "spotify:track:y",
+            "name": "N",
+            "artists": [{"name": "A"}],
+            "album": {"name": "B", "release_date": "2024-05-01"},
+        },
+    }
+    out = compact_track(item)
+    assert out["uri"] == "spotify:track:y"
+    assert out["year"] == "2024"
+
+
+def test_compact_track_item_wrapper_with_removed_track():
+    assert compact_track({"added_at": "2026-01-01T00:00:00Z", "item": None}) is None
+
+
 def test_compact_track_joins_multiple_artists():
     track = {
         "type": "track",

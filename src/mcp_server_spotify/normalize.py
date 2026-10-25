@@ -34,13 +34,16 @@ def to_uri(value: str, kind: str) -> str:
 def compact_track(track: dict | None) -> dict | None:
     """Project a Spotify track object down to ``{name, artist, album, year, uri}``.
 
-    Accepts either a raw track object or a playlist-item wrapper (``{"track": {...}}``).
+    Accepts either a raw track object or a playlist-item wrapper (``{"item": {...}}``,
+    or the pre-Feb-2026 ``{"track": {...}}``).
     Returns ``None`` for unavailable/removed items (local files, podcasts, deleted tracks).
     """
     if track is None:
         return None
-    if "track" in track and "uri" not in track:  # playlist-item wrapper
-        track = track["track"]
+    # Playlist-item wrapper. Spotify's Feb 2026 Web API migration renamed the
+    # wrapper key from "track" to "item"; accept both.
+    if "uri" not in track and ("item" in track or "track" in track):
+        track = track.get("item") or track.get("track")
     if not track or track.get("type") != "track":
         return None
     album = track.get("album") or {}
