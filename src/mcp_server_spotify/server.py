@@ -1,4 +1,4 @@
-"""FastMCP server exposing surgical Spotify playlist tools.
+"""MCP server exposing surgical Spotify playlist tools.
 
 Eleven tools: find_playlists, search_tracks, create_playlist, save_playlist,
 get_playlist, add_tracks, remove_tracks, dedupe_playlist, reorder_tracks,
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import random
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from . import auth
 from .normalize import (
@@ -23,7 +23,7 @@ from .normalize import (
     to_uri,
 )
 
-mcp = FastMCP("spotify")
+mcp = MCPServer("spotify")
 
 _TRACK_BATCH = 100  # Spotify caps add/remove at 100 items per request.
 

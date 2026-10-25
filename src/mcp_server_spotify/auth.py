@@ -12,6 +12,7 @@ no library, no profile data — that is the entire trust surface of this server.
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 
 import spotipy
@@ -24,21 +25,39 @@ _CACHE_DIR = Path.home() / ".spotify-mcp"
 _DEFAULT_REDIRECT_URI = "http://127.0.0.1:8888/callback"
 
 _client: spotipy.Spotify | None = None
+_client_lock = threading.Lock()
+
+
+class _SerializedOAuth(SpotifyOAuth):
+    """SpotifyOAuth that fetches tokens one caller at a time.
+
+    The MCP SDK runs sync tools on worker threads, so tool calls can overlap.
+    Unserialized, concurrent first calls would each start the browser flow and
+    concurrent refreshes would race on the token cache file.
+    """
+
+    _token_lock = threading.Lock()
+
+    def get_access_token(self, *args, **kwargs):
+        with self._token_lock:
+            return super().get_access_token(*args, **kwargs)
 
 
 def get_client() -> spotipy.Spotify:
     """Return a cached, authenticated Spotify client (creates it on first call)."""
     global _client
-    if _client is None:
+    with _client_lock:
+        if _client is not None:
+            return _client
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        auth = SpotifyOAuth(
+        auth = _SerializedOAuth(
             scope=SCOPES,
             redirect_uri=os.environ.get("SPOTIPY_REDIRECT_URI", _DEFAULT_REDIRECT_URI),
             cache_handler=CacheFileHandler(cache_path=str(_CACHE_DIR / "token.json")),
             open_browser=True,
         )
         _client = spotipy.Spotify(auth_manager=auth)
-    return _client
+        return _client
 
 
 def current_user_id() -> str:
