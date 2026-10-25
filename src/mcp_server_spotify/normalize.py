@@ -65,7 +65,9 @@ def compact_playlist(pl: dict | None) -> dict | None:
     if not pl:
         return None
     owner = (pl.get("owner") or {}).get("id")
-    tracks = (pl.get("tracks") or {}).get("total")
+    # Spotify's Feb 2026 Web API migration renamed the playlist's "tracks" field
+    # to "items"; accept both.
+    tracks = (pl.get("items") or pl.get("tracks") or {}).get("total")
     return {
         "name": pl.get("name"),
         "uri": pl.get("uri"),

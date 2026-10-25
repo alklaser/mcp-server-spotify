@@ -67,7 +67,7 @@ def search_tracks(query: str, limit: int = 10) -> list[dict]:
     Use this to turn a request like "some upbeat Pearl Jam" into concrete track
     URIs that the edit tools can act on.
     """
-    limit = max(1, min(limit, 50))
+    limit = max(1, min(limit, 10))  # Spotify's search max since the Feb 2026 migration
     results = auth.get_client().search(q=query, type="track", limit=limit)
     items = (results.get("tracks") or {}).get("items", [])
     return [t for t in (compact_track(i) for i in items) if t]

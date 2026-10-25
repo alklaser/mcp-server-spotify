@@ -260,8 +260,8 @@ def test_search_tracks_returns_compact_and_clamps_limit(fake_spotify):
             "uri": "spotify:track:a",
         }
     ]
-    # limit is clamped to Spotify's max of 50
-    assert client.calls[0] == ("search", "sponge plowed", "track", 50)
+    # limit is clamped to Spotify's max of 10
+    assert client.calls[0] == ("search", "sponge plowed", "track", 10)
 
 
 def test_create_playlist_returns_ids(fake_spotify):
