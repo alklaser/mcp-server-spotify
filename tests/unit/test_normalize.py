@@ -135,6 +135,12 @@ def test_compact_playlist_projects_fields():
     }
 
 
+def test_compact_playlist_reads_feb_2026_items_total():
+    # Since the Feb 2026 Web API migration, the track count is under "items".
+    pl = {"name": "N", "uri": "spotify:playlist:abc", "owner": {"id": "u"}, "items": {"total": 7}}
+    assert compact_playlist(pl)["tracks"] == 7
+
+
 @pytest.mark.parametrize("bad", [None, {}])
 def test_compact_playlist_handles_missing(bad):
     out = compact_playlist(bad)
